@@ -10,7 +10,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: super
       MONGO_INITDB_ROOT_PASSWORD: super
     volumes:
-      - ${PWD}/database/fights-db/initialize-database.js:/docker-entrypoint-initdb.d/1-init-db.js
+      - ${PWD}/database/fights-db/initialize-database.js:/docker-entrypoint-initdb.d/1-init-db.js:ro
   # rest-heroes:
   #   build: 
   #     dockerfile: Dockerfile
@@ -49,7 +49,8 @@ services:
       POSTGRES_PASSWORD: superman
       POSTGRES_DB: heroes_database
     volumes:
-      - ${PWD}/database/heroes-db/init/heroes.sql:/docker-entrypoint-initdb.d/init.sql
+      - ${PWD}/database/heroes-db/init/heroes.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
   villains-db:
     image: postgres:16
     # container_name: villains-db
@@ -60,7 +61,7 @@ services:
       POSTGRES_PASSWORD: superman
       POSTGRES_DB: villains_database
     volumes:
-      - ${PWD}/database/villains-db/init/villains.sql:/docker-entrypoint-initdb.d/init.sql
+      - ${PWD}/database/villains-db/init/villains.sql:/docker-entrypoint-initdb.d/init.sql:ro
   locations-db:
     image: mariadb:11.5
     # container_name: locations-db
@@ -73,7 +74,7 @@ services:
       MARIADB_ROOT_PASSWORD: locations
       MARIADB_SKIP_TEST_DB: yes
     volumes:
-      - ${PWD}/database/locations-db/init/initialize-tables.sql:/docker-entrypoint-initdb.d/1-init-tables.sql
+      - ${PWD}/database/locations-db/init/initialize-tables.sql:/docker-entrypoint-initdb.d/1-init-tables.sql:ro
   heroes:
     build: 
       dockerfile: Dockerfile
