@@ -1,0 +1,6 @@
+starlette
+uvicorn
+asyncpg
+python-dotenv
+urllib3
+aiomysql
