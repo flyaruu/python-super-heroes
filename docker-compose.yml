@@ -11,37 +11,9 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: super
     volumes:
       - ${PWD}/database/fights-db/initialize-database.js:/docker-entrypoint-initdb.d/1-init-db.js:ro
-  # rest-heroes:
-  #   build: 
-  #     dockerfile: Dockerfile
-  #     target: rest-heroes
-  #     context: .
-  #   ports:
-  #     - "8080:3000"
-  # rest-villains:
-  #   build: 
-  #     dockerfile: Dockerfile
-  #     target: rest-villains
-  #     context: .
-  #   ports:
-  #     - "8081:3000"
-  # grpc-locations:
-  #   build: 
-  #     dockerfile: Dockerfile
-  #     target: grpc-locations
-  #     context: .
-  #   ports:
-  #     - "50051:50051"
-  # rest-fights:
-  #   build: 
-  #     dockerfile: Dockerfile
-  #     target: rest-fights
-  #     context: .
-  #   ports:
-  #     - "8082:3000"
   heroes-db:
     image: postgres:16
-    # container_name: heroes-db
+    container_name: python-heroes-db
     ports:
       - "5432:5432"
     environment:
@@ -53,7 +25,7 @@ services:
 
   villains-db:
     image: postgres:16
-    # container_name: villains-db
+    container_name: python-villains-db
     ports:
       - "5433:5432"
     environment:
@@ -64,7 +36,7 @@ services:
       - ${PWD}/database/villains-db/init/villains.sql:/docker-entrypoint-initdb.d/init.sql:ro
   locations-db:
     image: mariadb:11.5
-    # container_name: locations-db
+    container_name: python-locations-db
     ports:
       - "3306:3306"
     environment:
@@ -76,7 +48,8 @@ services:
     volumes:
       - ${PWD}/database/locations-db/init/initialize-tables.sql:/docker-entrypoint-initdb.d/1-init-tables.sql:ro
   heroes:
-    build: 
+    container_name: python-heroes
+    build:
       context: services/heroes
     environment:
       DATABASE_URL: "postgres://superman:superman@heroes-db:5432/heroes_database"
@@ -84,6 +57,7 @@ services:
       - "8001:8000"
 
   villains:
+    container_name: python-villains
     build: 
       context: services/villains
     environment:
@@ -92,6 +66,7 @@ services:
       - "8002:8000"
 
   locations:
+    container_name: python-locations
     build: 
       context: services/locations
     environment:
@@ -100,6 +75,7 @@ services:
       - "8003:8000"
 
   fights:
+    container_name: python-fights
     build: 
       context: services/fights
     ports:
