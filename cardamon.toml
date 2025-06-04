@@ -8,11 +8,11 @@ curve = [30.508760345993128,0.0730308567638932,20.451103066868207,-5.08379885619
 
 [[process]]
 name = "superheroes"
-up = "docker compose up --force-recreate -d"
+up = "docker compose up --force-recreate --remove-orphans -d"
 down = "docker compose down"
 redirect.to = "parent"
 process.type = "docker"
-process.containers = ["python-fights-db", "python-heroes-db", "python-villains-db", "python-locations-db", "python-heroes", "python-villains", "python-locations", "python-fights "]
+process.containers = ["python-fights-db", "python-heroes-db", "python-villains-db", "python-locations-db", "python-heroes", "python-villains", "python-locations", "python-fights"]
 startup_grace = "20s"
 
 [[scenario]]
