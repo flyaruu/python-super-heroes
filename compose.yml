@@ -2,7 +2,6 @@ services:
 
   fights-db:
     image: mongo:7.0
-    # container_name: fights-db
     ports:
       - "27017:27017"
     environment:
@@ -10,10 +9,9 @@ services:
       MONGO_INITDB_ROOT_USERNAME: super
       MONGO_INITDB_ROOT_PASSWORD: super
     volumes:
-      - ${PWD}/database/fights-db/initialize-database.js:/docker-entrypoint-initdb.d/1-init-db.js:ro
+      - ./database/fights-db/initialize-database.js:/docker-entrypoint-initdb.d/1-init-db.js:ro
   heroes-db:
     image: postgres:16
-    container_name: python-heroes-db
     ports:
       - "5432:5432"
     environment:
@@ -21,11 +19,10 @@ services:
       POSTGRES_PASSWORD: superman
       POSTGRES_DB: heroes_database
     volumes:
-      - ${PWD}/database/heroes-db/init/heroes.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./database/heroes-db/init/heroes.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
   villains-db:
     image: postgres:16
-    container_name: python-villains-db
     ports:
       - "5433:5432"
     environment:
@@ -33,10 +30,9 @@ services:
       POSTGRES_PASSWORD: superman
       POSTGRES_DB: villains_database
     volumes:
-      - ${PWD}/database/villains-db/init/villains.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./database/villains-db/init/villains.sql:/docker-entrypoint-initdb.d/init.sql:ro
   locations-db:
     image: mariadb:11.5
-    container_name: python-locations-db
     ports:
       - "3306:3306"
     environment:
@@ -46,9 +42,8 @@ services:
       MARIADB_ROOT_PASSWORD: locations
       MARIADB_SKIP_TEST_DB: yes
     volumes:
-      - ${PWD}/database/locations-db/init/initialize-tables.sql:/docker-entrypoint-initdb.d/1-init-tables.sql:ro
+      - ./database/locations-db/init/initialize-tables.sql:/docker-entrypoint-initdb.d/1-init-tables.sql:ro
   heroes:
-    container_name: python-heroes
     build:
       context: services/heroes
     environment:
@@ -57,7 +52,6 @@ services:
       - "8001:8000"
 
   villains:
-    container_name: python-villains
     build: 
       context: services/villains
     environment:
@@ -66,7 +60,6 @@ services:
       - "8002:8000"
 
   locations:
-    container_name: python-locations
     build: 
       context: services/locations
     environment:
@@ -75,8 +68,23 @@ services:
       - "8003:8000"
 
   fights:
-    container_name: python-fights
     build: 
       context: services/fights
     ports:
       - "8004:8000"
+  k6:
+    build: k6-image
+    environment:
+      K6_HOST: http://fights:8000
+    command: ["bash", "-c", "while true; do sleep 3600; done"]
+    volumes:
+      - ./k6:/k6:ro
+      - ./k6/results:/results
+      # k6:
+      # build: k6-image
+      # environment:
+      #   K6_HOST: http://fights:8000 
+      # command: ["bash", "-c", "while true; do sleep 3600; done"]
+      # volumes:
+      #   - ./k6:/k6:ro
+      #   - ./k6/results:/results
