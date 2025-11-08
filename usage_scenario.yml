@@ -13,7 +13,7 @@ services:
         - ./k6:/k6:ro
         - ./k6/results:/results
 flow:
-  - name: Test Superheroes 1 RPS
+  - name: K6 run 1 RPS
     container: k6
     commands:
       - type: console
@@ -22,7 +22,7 @@ flow:
         log-stdout: true
         read-notes-stdout: true
         read-sci-stdout: true
-  - name: Test Superheroes 10 RPS
+  - name: K6 run 10 RPS
     container: k6
     commands:
       - type: console
@@ -31,7 +31,7 @@ flow:
         log-stdout: true
         read-notes-stdout: true
         read-sci-stdout: true
-  - name: Test Superheroes 50 RPS
+  - name: K6 run 50 RPS
     container: k6
     commands:
       - type: console
@@ -40,7 +40,7 @@ flow:
         log-stdout: true
         read-notes-stdout: true
         read-sci-stdout: true
-  - name: Test Superheroes 75 RPS
+  - name: K6 run 75 RPS
     container: k6
     commands:
       - type: console
@@ -49,7 +49,7 @@ flow:
         log-stdout: true
         read-notes-stdout: true
         read-sci-stdout: true             
-  - name: Test Superheroes 100 RPS
+  - name: K6 run 100 RPS
     container: k6
     commands:
       - type: console
@@ -58,12 +58,30 @@ flow:
         log-stdout: true
         read-notes-stdout: true
         read-sci-stdout: true
-  - name: Test Superheroes 150 RPS
+  - name: K6 run 200 RPS
     container: k6
     commands:
       - type: console
-        command: k6 run -e RAMPING_RATE=150 /k6/load.js
-        note: Starting k6 Load Test 150 rps
+        command: k6 run -e RAMPING_RATE=200 /k6/load.js
+        note: Starting k6 Load Test 200 rps
         log-stdout: true
         read-notes-stdout: true
         read-sci-stdout: true
+  - name: K6 run 300 RPS
+    container: k6
+    commands:
+      - type: console
+        command: k6 run -e RAMPING_RATE=300 /k6/load.js
+        note: Starting k6 Load Test 300 rps
+        log-stdout: true
+        read-notes-stdout: true
+        read-sci-stdout: true
+  - name: K6 run 400 RPS
+    container: k6
+    commands:
+      - type: console
+        command: k6 run -e RAMPING_RATE=400 /k6/load.js
+        note: Starting k6 Load Test 400 rps
+        log-stdout: true
+        read-notes-stdout: true
+        read-sci-stdout: true        
