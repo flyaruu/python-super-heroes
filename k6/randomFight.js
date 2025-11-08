@@ -10,13 +10,13 @@ export function randomFight() {
         },
     };
     var url = host + "/api/fights/randomfighters";
-    console.log("Requesting random fighters from: " + url);
+    // console.log("Requesting random fighters from: " + url);
     var response = http.get(host + "/api/fights/randomfighters");
     check(response, {
         'random fighters status is 200': (r) => r.status === 200,
     });
     var body = response.body;
-    console.log(body);
+    // console.log(body);
 
     var response_body = JSON.parse(body);
 

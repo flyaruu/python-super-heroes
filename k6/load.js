@@ -2,6 +2,7 @@ import http from 'k6/http';
 import { check } from 'k6';
 import { randomFight } from './randomFight.js';
 
+// TODO deal with dropped iterations, now it fails the entire run
 export const options = {
   thresholds: {
     http_req_duration: ['p(95)<500'],  // 95% of requests should be <50ms
