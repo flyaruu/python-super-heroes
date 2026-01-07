@@ -10,11 +10,6 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: super
     volumes:
       - ./database/fights-db/initialize-database.js:/docker-entrypoint-initdb.d/1-init-db.js:ro
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
   heroes-db:
     image: postgres:16
     ports:
