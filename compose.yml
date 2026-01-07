@@ -14,7 +14,7 @@ services:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 20
   heroes-db:
     image: postgres:16
     ports:
@@ -29,7 +29,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U superman"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 20
 
   villains-db:
     image: postgres:16
@@ -45,7 +45,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U superman"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 20
   locations-db:
     image: mariadb:11.5
     ports:
@@ -62,7 +62,7 @@ services:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 20
   heroes:
     build:
       context: services/heroes
