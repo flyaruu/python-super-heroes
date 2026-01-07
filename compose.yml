@@ -50,6 +50,8 @@ services:
       DATABASE_URL: "postgres://superman:superman@heroes-db:5432/heroes_database"
     ports:
       - "8001:8000"
+    depends_on:
+      - heroes-db
 
   villains:
     build: 
@@ -58,6 +60,8 @@ services:
       DATABASE_URL: "postgres://superman:superman@villains-db:5432/villains_database"
     ports:
       - "8002:8000"
+    depends_on:
+      - villains-db
 
   locations:
     build: 
@@ -66,12 +70,16 @@ services:
       MYSQL_URL: "mysql://locations:locations@locations-db/locations_database"
     ports:
       - "8003:8000"
+    depends_on:
+      - locations-db
 
   fights:
     build: 
       context: services/fights
     ports:
       - "8004:8000"
+    depends_on:
+      - fights-db
 
       # k6:
       # build: k6-image
