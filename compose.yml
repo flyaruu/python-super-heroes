@@ -97,8 +97,7 @@ services:
     ports:
       - "8004:8000"
     depends_on:
-      fights-db:
-        condition: service_healthy
+      - fights-db
 
       # k6:
       # build: k6-image
