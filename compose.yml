@@ -10,6 +10,11 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: super
     volumes:
       - ./database/fights-db/initialize-database.js:/docker-entrypoint-initdb.d/1-init-db.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   heroes-db:
     image: postgres:16
     ports:
@@ -20,6 +25,11 @@ services:
       POSTGRES_DB: heroes_database
     volumes:
       - ./database/heroes-db/init/heroes.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U superman"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   villains-db:
     image: postgres:16
@@ -31,6 +41,11 @@ services:
       POSTGRES_DB: villains_database
     volumes:
       - ./database/villains-db/init/villains.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U superman"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   locations-db:
     image: mariadb:11.5
     ports:
@@ -43,6 +58,11 @@ services:
       MARIADB_SKIP_TEST_DB: yes
     volumes:
       - ./database/locations-db/init/initialize-tables.sql:/docker-entrypoint-initdb.d/1-init-tables.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   heroes:
     build:
       context: services/heroes
@@ -51,7 +71,8 @@ services:
     ports:
       - "8001:8000"
     depends_on:
-      - heroes-db
+      heroes-db:
+        condition: service_healthy
 
   villains:
     build: 
@@ -61,7 +82,8 @@ services:
     ports:
       - "8002:8000"
     depends_on:
-      - villains-db
+      villains-db:
+        condition: service_healthy
 
   locations:
     build: 
@@ -71,7 +93,8 @@ services:
     ports:
       - "8003:8000"
     depends_on:
-      - locations-db
+      locations-db:
+        condition: service_healthy
 
   fights:
     build: 
@@ -79,7 +102,8 @@ services:
     ports:
       - "8004:8000"
     depends_on:
-      - fights-db
+      fights-db:
+        condition: service_healthy
 
       # k6:
       # build: k6-image
