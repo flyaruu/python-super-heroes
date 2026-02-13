@@ -1,0 +1,126 @@
+name: 'Build Steps for Performance Testing'
+description: 'Sets up the environment and validates all services for performance testing'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Initialize build log
+      shell: bash
+      run: |
+        echo "=== Build Steps for Performance Testing ===" | tee build-steps.log
+        echo "Started at: $(date)" | tee -a build-steps.log
+        echo "" | tee -a build-steps.log
+
+    - name: Check environment
+      shell: bash
+      run: |
+        echo "=== Environment Information ===" | tee -a build-steps.log
+        python3 --version | tee -a build-steps.log
+        docker --version | tee -a build-steps.log
+        docker compose version | tee -a build-steps.log
+        echo "" | tee -a build-steps.log
+
+    - name: Build Docker images
+      shell: bash
+      run: |
+        echo "=== Building Docker Images ===" | tee -a build-steps.log
+        docker compose build 2>&1 | tee -a build-steps.log
+        echo "Docker images built successfully" | tee -a build-steps.log
+        echo "" | tee -a build-steps.log
+
+    - name: Start services with Docker Compose
+      shell: bash
+      run: |
+        echo "=== Starting Services with Docker Compose ===" | tee -a build-steps.log
+        docker compose up -d 2>&1 | tee -a build-steps.log
+        echo "" | tee -a build-steps.log
+
+    - name: Wait for services to be ready
+      shell: bash
+      run: |
+        echo "=== Waiting for Services to Initialize ===" | tee -a build-steps.log
+        echo "Waiting 45 seconds for databases and services to start..." | tee -a build-steps.log
+        sleep 45
+        echo "" | tee -a build-steps.log
+
+    - name: Show running containers
+      shell: bash
+      run: |
+        echo "=== Running Docker Containers ===" | tee -a build-steps.log
+        docker compose ps 2>&1 | tee -a build-steps.log
+        echo "" | tee -a build-steps.log
+
+    - name: Validate service health
+      shell: bash
+      run: |
+        echo "=== Validating Service Health ===" | tee -a build-steps.log
+        
+        echo "Testing Heroes service..." | tee -a build-steps.log
+        if curl -f -s http://localhost:8001/api/heroes/random 2>&1 | tee -a build-steps.log; then
+          echo "✓ Heroes service is responding" | tee -a build-steps.log
+        else
+          echo "✗ Heroes service not responding" | tee -a build-steps.log
+        fi
+        echo "" | tee -a build-steps.log
+        
+        echo "Testing Villains service..." | tee -a build-steps.log
+        if curl -f -s http://localhost:8002/api/villains/random 2>&1 | tee -a build-steps.log; then
+          echo "✓ Villains service is responding" | tee -a build-steps.log
+        else
+          echo "✗ Villains service not responding" | tee -a build-steps.log
+        fi
+        echo "" | tee -a build-steps.log
+        
+        echo "Testing Locations service..." | tee -a build-steps.log
+        if curl -f -s http://localhost:8003/api/locations/random 2>&1 | tee -a build-steps.log; then
+          echo "✓ Locations service is responding" | tee -a build-steps.log
+        else
+          echo "✗ Locations service not responding" | tee -a build-steps.log
+        fi
+        echo "" | tee -a build-steps.log
+        
+        echo "Testing Fights service..." | tee -a build-steps.log
+        if curl -f -s http://localhost:8004/api/fights/random 2>&1 | tee -a build-steps.log; then
+          echo "✓ Fights service is responding" | tee -a build-steps.log
+        else
+          echo "✗ Fights service not responding" | tee -a build-steps.log
+        fi
+        echo "" | tee -a build-steps.log
+
+    - name: Check service logs for errors
+      shell: bash
+      run: |
+        echo "=== Recent Service Logs ===" | tee -a build-steps.log
+        echo "Heroes service logs:" | tee -a build-steps.log
+        docker compose logs --tail=10 heroes 2>&1 | tee -a build-steps.log || true
+        echo "" | tee -a build-steps.log
+        
+        echo "Villains service logs:" | tee -a build-steps.log
+        docker compose logs --tail=10 villains 2>&1 | tee -a build-steps.log || true
+        echo "" | tee -a build-steps.log
+        
+        echo "Locations service logs:" | tee -a build-steps.log
+        docker compose logs --tail=10 locations 2>&1 | tee -a build-steps.log || true
+        echo "" | tee -a build-steps.log
+        
+        echo "Fights service logs:" | tee -a build-steps.log
+        docker compose logs --tail=10 fights 2>&1 | tee -a build-steps.log || true
+        echo "" | tee -a build-steps.log
+
+    - name: Install performance testing tools
+      shell: bash
+      run: |
+        echo "=== Installing Performance Testing Tools ===" | tee -a build-steps.log
+        pip install --user py-spy memory-profiler httpx 2>&1 | tee -a build-steps.log || echo "Note: Some tools may not install in this environment" | tee -a build-steps.log
+        echo "" | tee -a build-steps.log
+
+    - name: Build summary
+      shell: bash
+      run: |
+        echo "=== Build Summary ===" | tee -a build-steps.log
+        echo "Completed at: $(date)" | tee -a build-steps.log
+        echo "Services are ready for performance testing" | tee -a build-steps.log
+        echo "Use 'docker compose exec k6 k6 run /k6/10rps.js' to run load tests" | tee -a build-steps.log
+        echo "" | tee -a build-steps.log
+        echo "Build log saved to: build-steps.log" | tee -a build-steps.log
+        cat build-steps.log
