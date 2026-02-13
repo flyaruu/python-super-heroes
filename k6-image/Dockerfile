@@ -3,7 +3,7 @@
 # ------------------------------
 FROM alpine:3.20 AS builder
 
-ARG K6_VERSION=1.3.0
+ARG K6_VERSION=1.5.0
 # Valid values: amd64, arm64
 ARG K6_ARCH=amd64
 ENV K6_TARBALL="k6-v${K6_VERSION}-linux-${K6_ARCH}.tar.gz"
