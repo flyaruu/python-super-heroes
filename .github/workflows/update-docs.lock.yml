@@ -25,7 +25,7 @@
 # plain English), ensures single source of truth, and creates draft PRs with documentation
 # updates. Supports documentation-as-code philosophy.
 #
-# frontmatter-hash: 25a4af47b531c7389e5a986d25402aa9d3a205837889bc586fbcfd7ce066e2f2
+# frontmatter-hash: 7e4286fd5cd74b3a49d0de729b298dfc549f15861ad77abfd55c01f7711e0bb7
 
 name: "Update Docs"
 "on":
@@ -70,7 +70,9 @@ jobs:
   agent:
     needs: activation
     runs-on: ubuntu-latest
-    permissions: read-all
+    permissions:
+      contents: read
+      pull-requests: read
     env:
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       GH_AW_ASSETS_ALLOWED_EXTS: ""
