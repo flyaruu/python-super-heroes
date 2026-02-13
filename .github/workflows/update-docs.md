@@ -11,7 +11,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions: read-all
+permissions:
+  contents: write
+  pull-requests: write
 
 network: defaults
 
