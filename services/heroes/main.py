@@ -56,13 +56,24 @@ async def list_all(request: Request) -> JSONResponse:
 
 async def get_random_item(request: Request) -> JSONResponse:
     async with app.state.pool.acquire() as conn:
+        # Energy-efficient random selection using max ID approach
+        max_id_row = await conn.fetchrow("SELECT MAX(id) as max_id FROM Hero")
+        max_id = max_id_row['max_id'] if max_id_row and max_id_row['max_id'] else 1
+        
+        # Use random offset with LIMIT 1 - more efficient than ORDER BY RANDOM()
+        import random
+        random_id = random.randint(1, max_id)
         row = await conn.fetchrow(
-            "select * from Hero order by random() limit 1"
+            "SELECT * FROM Hero WHERE id >= $1 LIMIT 1",
+            random_id
         )
+        
+        # Fallback if no result (sparse IDs)
+        if not row:
+            row = await conn.fetchrow("SELECT * FROM Hero ORDER BY id LIMIT 1")
+    
     if not row:
         return JSONResponse({"detail": "Not found"}, status_code=404)
-    # row.rename("othername", "otherName") 
-    # row["otherName"] = row.pop("othername", None)  # remove 'otherName' and add 'othername'
     return JSONResponse(dict(row))
 
 async def get_item(request: Request) -> JSONResponse:

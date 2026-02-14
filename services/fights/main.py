@@ -4,16 +4,29 @@ import uvicorn
 import os
 import logging
 import uuid
+import asyncio
 from starlette.responses import JSONResponse, Response
 
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+# Configure logging - set to WARNING to reduce overhead
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 app = FastAPI()
-client = httpx.AsyncClient()
+# Optimized HTTP client with connection pooling and timeouts
+client = httpx.AsyncClient(
+    limits=httpx.Limits(
+        max_connections=100,
+        max_keepalive_connections=20,
+    ),
+    timeout=httpx.Timeout(
+        connect=2.0,
+        read=5.0,
+        write=2.0,
+        pool=2.0,
+    ),
+)
 
 @app.on_event("startup")
 async def startup_event():
@@ -40,7 +53,6 @@ fights_router = APIRouter(prefix="/api")
 #     return response.json()
 
 async def get_hero():
-    logger.info("Fetching random hero from external service")
     """Fetch a random hero from external service."""
     try:
         response = await client.get("http://heroes:8000/api/heroes/random_hero")
@@ -52,7 +64,6 @@ async def get_hero():
     return response.json()
 
 async def get_villain():
-    logger.info("Fetching random villain from external service")
     """Fetch a random villain from external service."""
     try:
         response = await client.get("http://villains:8000/api/villains/random_villain")
@@ -64,7 +75,6 @@ async def get_villain():
     return response.json()
 
 async def get_location():
-    logger.info("Fetching random location from external service")
     """Fetch a random fight location from external service."""
     try:
         response = await client.get("http://locations:8000/api/locations/random_location")
@@ -78,34 +88,29 @@ async def get_location():
 
 @fights_router.get("/fights/randomfighters")
 async def random_fighters()-> JSONResponse:
-    logger.info("Fetching random fighters from external service")
-    """Fetch two random fighters from external service."""
-    hero = await get_hero()
-    villain = await get_villain()
+    """Fetch two random fighters from external service in parallel."""
+    hero, villain = await asyncio.gather(get_hero(), get_villain())
     return JSONResponse({"hero": hero, "villain": villain})
 
 @fights_router.get("/fights/randomlocation")
 async def random_location()-> JSONResponse:
-    logger.info("Fetching random fight location from external service")
+    """Fetch random fight location from external service."""
     location = await get_location()
-
     return JSONResponse(location)
 
 @fights_router.post("/fights")
 async def post_fight(request: Request)-> JSONResponse:
     fight_request = await request.json()
-    logger.info("Posting new fight")
     hero = fight_request.get("hero")
     villain = fight_request.get("villain")
     hero_level = hero.get("level", 0)
     villain_level = villain.get("level", 0)
 
     location = fight_request.get("location")
-    logger.info(f"Executing fight: {hero['name']} (Level {hero_level}) vs {villain['name']} (Level {villain_level}) at {location['name']}")
 
     response = {
-        "id": str(uuid.uuid4()),  # Generate a unique ID for the fight
-        "fight_date": "2023-10-01T12:00:00Z",  # Placeholder for fight date
+        "id": str(uuid.uuid4()),
+        "fight_date": "2023-10-01T12:00:00Z",
         "winner_name": hero["name"] if hero_level > villain_level else villain["name"],
         "winner_level": max(hero_level, villain_level),
         "winner_powers": hero.get("powers", "") if hero_level > villain_level else villain.get("powers", ""),
@@ -121,7 +126,6 @@ async def post_fight(request: Request)-> JSONResponse:
         "location": location,
     }
 
-    # Here you would typically process the fight_request and initiate a fight
     return JSONResponse(response, status_code=200)
 
 
@@ -129,17 +133,19 @@ async def post_fight(request: Request)-> JSONResponse:
 
 @fights_router.get("/fights/execute_fight")
 async def execute_random_fight()-> JSONResponse:
-    logger.info("Executing random fight")
-    location = await get_location()
-    hero = await get_hero()
-    villain = await get_villain()
+    """Execute random fight by fetching all data in parallel."""
+    location, hero, villain = await asyncio.gather(
+        get_location(),
+        get_hero(),
+        get_villain()
+    )
+    
     hero_level = hero.get("level", 0)
     villain_level = villain.get("level", 0)
-    logger.info(f"Executing fight: {hero['name']} (Level {hero_level}) vs {villain['name']} (Level {villain_level}) at {location['name']}")
 
     response = {
-        "id": str(uuid.uuid4()),  # Generate a unique ID for the fight
-        "fight_date": "2023-10-01T12:00:00Z",  # Placeholder for fight date
+        "id": str(uuid.uuid4()),
+        "fight_date": "2023-10-01T12:00:00Z",
         "winner_name": hero["name"] if hero_level > villain_level else villain["name"],
         "winner_level": max(hero_level, villain_level),
         "winner_powers": hero.get("powers", "") if hero_level > villain_level else villain.get("powers", ""),
@@ -155,20 +161,7 @@ async def execute_random_fight()-> JSONResponse:
         "location": location,
     }
 
-
-    # response = {
-    #     "hero": hero,
-    #     "villain": villain,
-    #     "location": location
-    # }
-    # if hero_level > villain_level:
-    #     winner = "hero"
-    # else:
-    #     winner = "villain"
-    # return {"winner": winner}
     return JSONResponse(response, status_code=200)
-
-    # return {"hero": hero, "villain": villain, "location": location}
 
 # @fights_router.get("/")
 # async def list_fights():
