@@ -16,8 +16,8 @@ import urllib
 load_dotenv()
 
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+# Configure logging - set to WARNING to reduce overhead
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -74,7 +74,6 @@ async def shutdown():
     await app.state.pool.close()
 
 async def list_all(request: Request) -> JSONResponse:
-    logger.info("Fetching all locations from the database")
     async with app.state.pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute("select * from Location")
@@ -87,10 +86,25 @@ async def thing(request: Request) -> JSONResponse:
 async def get_random_item(request: Request) -> JSONResponse:
     async with app.state.pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
+            # Energy-efficient random selection using max ID approach
+            await cur.execute("SELECT MAX(id) as max_id FROM locations")
+            max_id_row = await cur.fetchone()
+            max_id = max_id_row['max_id'] if max_id_row and max_id_row['max_id'] else 1
+            
+            # Use random offset with LIMIT 1 - more efficient than ORDER BY RAND()
+            import random
+            random_id = random.randint(1, max_id)
             await cur.execute(
-                "select * from locations order by rand() limit 1;"
+                "SELECT * FROM locations WHERE id >= %s LIMIT 1",
+                (random_id,)
             )
             row = await cur.fetchone()
+            
+            # Fallback if no result (sparse IDs)
+            if not row:
+                await cur.execute("SELECT * FROM locations ORDER BY id LIMIT 1")
+                row = await cur.fetchone()
+    
     if not row:
         return JSONResponse({"detail": "Not found"}, status_code=404)
     return JSONResponse(dict(row))
