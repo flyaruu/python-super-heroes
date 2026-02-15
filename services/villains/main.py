@@ -2,6 +2,7 @@ import os
 import asyncio
 import asyncpg
 import time
+import random
 from starlette.applications import Starlette
 from starlette.routing import Route
 from starlette.requests import Request
@@ -13,6 +14,10 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "postgres://superman:superman@villains-db:5432/villains_database")
 RETRY_TIMEOUT = 10  # seconds
 RETRY_INTERVAL = 0.5  # seconds between attempts
+
+# Cache for MAX(id) to reduce database queries
+max_id_cache = {"value": None, "last_updated": 0}
+MAX_ID_CACHE_TTL = 60  # Cache for 60 seconds
 
 async def startup():
     start_time = asyncio.get_event_loop().time()
@@ -56,12 +61,16 @@ async def list_all(request: Request) -> JSONResponse:
 
 async def get_random_item(request: Request) -> JSONResponse:
     async with app.state.pool.acquire() as conn:
-        # Energy-efficient random selection using max ID approach
-        max_id_row = await conn.fetchrow("SELECT MAX(id) as max_id FROM Villain")
-        max_id = max_id_row['max_id'] if max_id_row and max_id_row['max_id'] else 1
+        # Check cache first to avoid repeated MAX(id) queries
+        now = time.time()
+        if max_id_cache["value"] is None or (now - max_id_cache["last_updated"]) > MAX_ID_CACHE_TTL:
+            max_id_row = await conn.fetchrow("SELECT MAX(id) as max_id FROM Villain")
+            max_id_cache["value"] = max_id_row['max_id'] if max_id_row and max_id_row['max_id'] else 1
+            max_id_cache["last_updated"] = now
+        
+        max_id = max_id_cache["value"]
         
         # Use random offset with LIMIT 1 - more efficient than ORDER BY RANDOM()
-        import random
         random_id = random.randint(1, max_id)
         row = await conn.fetchrow(
             "SELECT * FROM Villain WHERE id >= $1 LIMIT 1",

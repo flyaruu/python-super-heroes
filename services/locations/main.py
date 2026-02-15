@@ -3,6 +3,7 @@ import asyncio
 import aiomysql
 import logging
 import time
+import random
 
 from starlette.applications import Starlette
 from starlette.routing import Route
@@ -33,6 +34,10 @@ DB_NAME = parsed.path.lstrip("/")
 RETRY_TIMEOUT = 30  # seconds
 RETRY_INTERVAL = 0.5  # seconds between attempts
 
+# Cache for MAX(id) to reduce database queries
+max_id_cache = {"value": None, "last_updated": 0}
+MAX_ID_CACHE_TTL = 60  # Cache for 60 seconds
+
 
 async def startup():
     """Try to connect and create table, retrying for up to 10 seconds."""
@@ -43,8 +48,8 @@ async def startup():
         "user": parsed.username,
         "password": parsed.password,
         "db": parsed.path.lstrip("/"),
-        "minsize": 1,
-        "maxsize": 10,
+        "minsize": 10,
+        "maxsize": 50,
     }
 
     deadline = time.monotonic() + 20.0
@@ -86,13 +91,17 @@ async def thing(request: Request) -> JSONResponse:
 async def get_random_item(request: Request) -> JSONResponse:
     async with app.state.pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
-            # Energy-efficient random selection using max ID approach
-            await cur.execute("SELECT MAX(id) as max_id FROM locations")
-            max_id_row = await cur.fetchone()
-            max_id = max_id_row['max_id'] if max_id_row and max_id_row['max_id'] else 1
+            # Check cache first to avoid repeated MAX(id) queries
+            now = time.time()
+            if max_id_cache["value"] is None or (now - max_id_cache["last_updated"]) > MAX_ID_CACHE_TTL:
+                await cur.execute("SELECT MAX(id) as max_id FROM locations")
+                max_id_row = await cur.fetchone()
+                max_id_cache["value"] = max_id_row['max_id'] if max_id_row and max_id_row['max_id'] else 1
+                max_id_cache["last_updated"] = now
+            
+            max_id = max_id_cache["value"]
             
             # Use random offset with LIMIT 1 - more efficient than ORDER BY RAND()
-            import random
             random_id = random.randint(1, max_id)
             await cur.execute(
                 "SELECT * FROM locations WHERE id >= %s LIMIT 1",
