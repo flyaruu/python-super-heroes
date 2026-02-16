@@ -1,11 +1,12 @@
 from fastapi import FastAPI, HTTPException, Request, APIRouter
+from fastapi.middleware.gzip import GZipMiddleware
 import httpx
 import uvicorn
 import os
 import logging
 import uuid
 import asyncio
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse
 
 
 # Configure logging - set to WARNING to reduce overhead
@@ -14,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI()
+
+# Add gzip compression middleware to reduce network I/O
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
 # Optimized HTTP client with connection pooling and timeouts
 client = httpx.AsyncClient(
     limits=httpx.Limits(
