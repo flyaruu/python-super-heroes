@@ -2,3 +2,4 @@ starlette
 uvicorn
 asyncpg
 python-dotenv
+prometheus-client

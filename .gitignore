@@ -4,3 +4,8 @@ target
 .stdout
 .buildx-cache
 k6/results/
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python

@@ -5,15 +5,56 @@ import os
 import logging
 import uuid
 import asyncio
+import time
 from starlette.responses import JSONResponse, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 
 # Configure logging - set to WARNING to reduce overhead
 logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+# Prometheus metrics
+REQUEST_COUNT = Counter(
+    'http_requests_total',
+    'Total HTTP requests',
+    ['method', 'endpoint', 'status']
+)
+REQUEST_DURATION = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'endpoint']
+)
+EXTERNAL_REQUEST_DURATION = Histogram(
+    'external_request_duration_seconds',
+    'External HTTP request duration in seconds',
+    ['service']
+)
+
+class MetricsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        start_time = time.time()
+        response = await call_next(request)
+        duration = time.time() - start_time
+        
+        # Record metrics
+        REQUEST_COUNT.labels(
+            method=request.method,
+            endpoint=request.url.path,
+            status=response.status_code
+        ).inc()
+        REQUEST_DURATION.labels(
+            method=request.method,
+            endpoint=request.url.path
+        ).observe(duration)
+        
+        return response
+
 
 app = FastAPI()
+app.add_middleware(MetricsMiddleware)
+
 # Optimized HTTP client with connection pooling and timeouts
 client = httpx.AsyncClient(
     limits=httpx.Limits(
@@ -54,6 +95,7 @@ fights_router = APIRouter(prefix="/api")
 
 async def get_hero():
     """Fetch a random hero from external service."""
+    start_time = time.time()
     try:
         response = await client.get("http://heroes:8000/api/heroes/random_hero")
         response.raise_for_status()
@@ -61,10 +103,13 @@ async def get_hero():
         raise HTTPException(status_code=502, detail=f"Error connecting to external service: {exc}")
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+    finally:
+        EXTERNAL_REQUEST_DURATION.labels(service='heroes').observe(time.time() - start_time)
     return response.json()
 
 async def get_villain():
     """Fetch a random villain from external service."""
+    start_time = time.time()
     try:
         response = await client.get("http://villains:8000/api/villains/random_villain")
         response.raise_for_status()
@@ -72,10 +117,13 @@ async def get_villain():
         raise HTTPException(status_code=502, detail=f"Error connecting to external service: {exc}")
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+    finally:
+        EXTERNAL_REQUEST_DURATION.labels(service='villains').observe(time.time() - start_time)
     return response.json()
 
 async def get_location():
     """Fetch a random fight location from external service."""
+    start_time = time.time()
     try:
         response = await client.get("http://locations:8000/api/locations/random_location")
         response.raise_for_status()
@@ -83,6 +131,8 @@ async def get_location():
         raise HTTPException(status_code=502, detail=f"Error connecting to external service: {exc}")
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+    finally:
+        EXTERNAL_REQUEST_DURATION.labels(service='locations').observe(time.time() - start_time)
     return response.json()
 
 
@@ -177,6 +227,11 @@ async def execute_random_fight()-> JSONResponse:
 
 # Include the router
 app.include_router(fights_router)
+
+@app.get("/metrics")
+async def metrics():
+    """Expose Prometheus metrics endpoint"""
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
