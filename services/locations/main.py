@@ -2,6 +2,7 @@ import os
 import asyncio
 import aiomysql
 import logging
+import random
 import time
 
 from starlette.applications import Starlette
@@ -11,8 +12,6 @@ from starlette.responses import JSONResponse, Response
 from dotenv import load_dotenv
 from urllib.parse import urlparse, unquote
 
-import urllib
-
 load_dotenv()
 
 
@@ -21,7 +20,7 @@ logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(name)s - %(le
 logger = logging.getLogger(__name__)
 
 
-# Single URL: mysql://user:password@host:port/db
+# Parse MySQL URL once at module level
 MYSQL_URL = os.getenv("MYSQL_URL", "mysql://locations:locations@localhost/locations_database")
 parsed = urlparse(MYSQL_URL)
 DB_USER = unquote(parsed.username)
@@ -36,13 +35,12 @@ RETRY_INTERVAL = 0.5  # seconds between attempts
 
 async def startup():
     """Try to connect and create table, retrying for up to 10 seconds."""
-    parsed = urllib.parse.urlparse(MYSQL_URL)
     conn_kwargs = {
-        "host": parsed.hostname,
-        "port": parsed.port or 3306,
-        "user": parsed.username,
-        "password": parsed.password,
-        "db": parsed.path.lstrip("/"),
+        "host": DB_HOST,
+        "port": DB_PORT,
+        "user": DB_USER,
+        "password": DB_PASSWORD,
+        "db": DB_NAME,
         "minsize": 1,
         "maxsize": 10,
     }
@@ -92,7 +90,6 @@ async def get_random_item(request: Request) -> JSONResponse:
             max_id = max_id_row['max_id'] if max_id_row and max_id_row['max_id'] else 1
             
             # Use random offset with LIMIT 1 - more efficient than ORDER BY RAND()
-            import random
             random_id = random.randint(1, max_id)
             await cur.execute(
                 "SELECT * FROM locations WHERE id >= %s LIMIT 1",
@@ -123,7 +120,12 @@ async def get_item(request: Request) -> JSONResponse:
     row_dict = dict(row)
     return JSONResponse(row_dict)
 
+async def health_check(request: Request) -> Response:
+    """Lightweight health check endpoint for orchestration."""
+    return Response("OK", status_code=200, media_type="text/plain")
+
 routes = [
+    Route("/health", health_check, methods=["GET"]),
     Route("/thing", thing, methods=["GET"]),
     Route("/api/locations/random_location", get_random_item, methods=["GET"]),
     Route("/api/locations", list_all, methods=["GET"]),
