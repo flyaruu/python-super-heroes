@@ -161,7 +161,22 @@ To decide which phase to perform:
 
    a. Create a new branch starting with "perf/".
    
-   b. Work towards the performance improvement goal you selected. Consider approaches like:
+   b. **IMPORTANT: Establish baseline performance data before making any changes:**
+      ```bash
+      # Ensure services are running
+      docker compose up -d
+      
+      # Collect baseline performance data
+      python scripts/collect_performance_data.py \
+        --rps 50 \
+        --output k6/results/baseline.json \
+        --report k6/results/baseline_report.md
+      
+      # Review the baseline report to understand current performance
+      cat k6/results/baseline_report.md
+      ```
+   
+   c. Work towards the performance improvement goal you selected. Consider approaches like:
      - **Code optimization:** Algorithm improvements, data structure changes, caching
      - **User experience:** Reducing load times, improving responsiveness, optimizing assets
      - **System efficiency:** Resource utilization, concurrency, I/O optimization
@@ -169,11 +184,31 @@ To decide which phase to perform:
      - **Infrastructure:** Scaling strategies, deployment efficiency, monitoring setup
 
      **Measurement strategy:**
-     Plan before/after measurements using appropriate methods for your performance target - synthetic benchmarks for algorithms, user journey tests for UX, load tests for scalability, or build time comparisons for developer experience. Choose reliable measurement approaches that clearly demonstrate impact.
+     Use the performance data collection framework to make data-driven decisions:
+     - Review baseline metrics to identify actual bottlenecks (not guesses)
+     - Focus on high-impact areas shown by data (high P95, latency variance, error rates)
+     - Make targeted changes based on specific metrics
+     - Use service metrics at `/metrics` endpoints for detailed insights
 
-   c. Ensure the code still works as expected and that any existing relevant tests pass. Add new tests if appropriate and make sure they pass too.
+   d. Ensure the code still works as expected and that any existing relevant tests pass. Add new tests if appropriate and make sure they pass too.
 
-   d. Measure performance impact. Document measurement attempts even if unsuccessful. If no improvement then iterate, revert, or try different approach.
+   e. **Measure performance impact with data:**
+      ```bash
+      # Rebuild services with your changes
+      docker compose up -d --build
+      
+      # Collect new performance data and compare with baseline
+      python scripts/collect_performance_data.py \
+        --rps 50 \
+        --baseline k6/results/baseline.json \
+        --output k6/results/optimized.json \
+        --report k6/results/optimized_report.md
+      
+      # Review the comparison report
+      cat k6/results/optimized_report.md
+      ```
+      
+      Document measurement attempts even if unsuccessful. If no improvement then iterate, revert, or try different approach. The comparison report will show improvements and regressions with specific percentages.
 
 3. **Finalizing changes**
 
@@ -197,10 +232,27 @@ To decide which phase to perform:
       - **Future work:** Additional opportunities identified
 
       **Performance evidence section:**
-      Document performance impact with appropriate evidence - timing data, resource usage, user metrics, or other relevant measurements. Be transparent about measurement limitations and methodology. Mark estimates clearly.
+      Document performance impact with quantified evidence from the data collection framework:
+      - Include before/after metrics from baseline vs optimized reports
+      - Show specific improvements: "P95 latency: 450ms → 320ms (-28.89%)"
+      - Reference the measurement methodology: "Tested at 50 RPS using scripts/collect_performance_data.py"
+      - Attach or reference the full performance reports (baseline_report.md, optimized_report.md)
+      - Be transparent about measurement limitations and methodology
+      
+      **DO NOT include the raw JSON files or report files in the PR** - only reference them in the description with key metrics.
 
       **Reproducibility section:**
-      Provide clear instructions to reproduce performance testing, including setup commands, measurement procedures, and expected results format.
+      Provide clear instructions to reproduce performance testing:
+      ```bash
+      # Collect baseline
+      docker compose up -d
+      python scripts/collect_performance_data.py --rps 50 --output baseline.json --report baseline.md
+      
+      # After changes
+      docker compose up -d --build
+      python scripts/collect_performance_data.py --rps 50 --baseline baseline.json --output optimized.json --report optimized.md
+      ```
+      Include specific RPS values, test duration, and any other relevant parameters used.
 
       After creation, check the pull request to ensure it is correct, includes all expected files, and doesn't include any unwanted files or changes. Make any necessary corrections by pushing further commits to the branch.
 
