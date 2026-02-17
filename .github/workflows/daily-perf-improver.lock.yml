@@ -25,13 +25,10 @@
 # and create performance engineering guides, then implement optimizations and measure impact.
 # Creates discussions to coordinate and draft PRs with improvements.
 #
-# frontmatter-hash: 5b76e33fa2d5796d1f0f9106f33bf27841e077ed05de815d660456d33bac74e5
+# frontmatter-hash: d532c08be3e59bb9a8cee85c74eb4534373bf3bb86cfec9ecb3d5ec1deb0883e
 
 name: "Daily Perf Improver"
 "on":
-  schedule:
-  - cron: "6 5 * * *"
-    # Friendly format: daily (scattered)
   workflow_dispatch:
 
 permissions: {}

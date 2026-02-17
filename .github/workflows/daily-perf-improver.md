@@ -7,7 +7,6 @@ description: |
   Creates discussions to coordinate and draft PRs with improvements.
 
 on:
-  schedule: daily
   workflow_dispatch:
 
 timeout-minutes: 60
