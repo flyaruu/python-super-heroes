@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request, APIRouter
+from fastapi.middleware.gzip import GZipMiddleware
 import httpx
 import uvicorn
 import os
@@ -14,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI()
+# Add gzip compression for reduced network I/O and energy usage
+app.add_middleware(GZipMiddleware, minimum_size=500)
 # Optimized HTTP client with connection pooling and timeouts
 client = httpx.AsyncClient(
     limits=httpx.Limits(
