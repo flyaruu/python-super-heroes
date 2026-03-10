@@ -37,6 +37,12 @@ async def startup_event():
 async def shutdown_event():
     await client.aclose()
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Lightweight health check endpoint for orchestration."""
+    return Response("OK", status_code=200, media_type="text/plain")
+
 # Fights router with external service calls
 fights_router = APIRouter(prefix="/api")
 
@@ -86,6 +92,34 @@ async def get_location():
     return response.json()
 
 
+def build_fight_response(hero: dict, villain: dict, location: dict) -> dict:
+    """Build fight response dict to avoid duplicate logic."""
+    hero_level = hero.get("level", 0)
+    villain_level = villain.get("level", 0)
+    hero_wins = hero_level > villain_level
+    
+    winner = hero if hero_wins else villain
+    loser = villain if hero_wins else hero
+    
+    return {
+        "id": str(uuid.uuid4()),
+        "fight_date": "2023-10-01T12:00:00Z",
+        "winner_name": winner["name"],
+        "winner_level": winner.get("level", 0),
+        "winner_powers": winner.get("powers", ""),
+        "winner_picture": winner.get("picture", ""),
+        "loser_name": loser["name"],
+        "loser_level": loser.get("level", 0),
+        "loser_powers": loser.get("powers", ""),
+        "loser_picture": loser.get("picture", ""),
+        "winner_team": "heroes" if hero_wins else "villains",
+        "loser_team": "villains" if hero_wins else "heroes",
+        "hero": hero,
+        "villain": villain,
+        "location": location,
+    }
+
+
 @fights_router.get("/fights/randomfighters")
 async def random_fighters()-> JSONResponse:
     """Fetch two random fighters from external service in parallel."""
@@ -103,29 +137,9 @@ async def post_fight(request: Request)-> JSONResponse:
     fight_request = await request.json()
     hero = fight_request.get("hero")
     villain = fight_request.get("villain")
-    hero_level = hero.get("level", 0)
-    villain_level = villain.get("level", 0)
-
     location = fight_request.get("location")
-
-    response = {
-        "id": str(uuid.uuid4()),
-        "fight_date": "2023-10-01T12:00:00Z",
-        "winner_name": hero["name"] if hero_level > villain_level else villain["name"],
-        "winner_level": max(hero_level, villain_level),
-        "winner_powers": hero.get("powers", "") if hero_level > villain_level else villain.get("powers", ""),
-        "winner_picture": hero.get("picture", "") if hero_level > villain_level else villain.get("picture", ""),
-        "loser_name": villain["name"] if hero_level > villain_level else hero["name"],
-        "loser_level": min(hero_level, villain_level),
-        "loser_powers": villain.get("powers", "") if hero_level > villain_level else hero.get("powers", ""),
-        "loser_picture": villain.get("picture", "") if hero_level > villain_level else hero.get("picture", ""),
-        "winner_team": "heroes" if hero_level > villain_level else "villains",
-        "loser_team": "villains" if hero_level > villain_level else "heroes",
-        "hero": hero,
-        "villain": villain,
-        "location": location,
-    }
-
+    
+    response = build_fight_response(hero, villain, location)
     return JSONResponse(response, status_code=200)
 
 
@@ -140,27 +154,7 @@ async def execute_random_fight()-> JSONResponse:
         get_villain()
     )
     
-    hero_level = hero.get("level", 0)
-    villain_level = villain.get("level", 0)
-
-    response = {
-        "id": str(uuid.uuid4()),
-        "fight_date": "2023-10-01T12:00:00Z",
-        "winner_name": hero["name"] if hero_level > villain_level else villain["name"],
-        "winner_level": max(hero_level, villain_level),
-        "winner_powers": hero.get("powers", "") if hero_level > villain_level else villain.get("powers", ""),
-        "winner_picture": hero.get("picture", "") if hero_level > villain_level else villain.get("picture", ""),
-        "loser_name": villain["name"] if hero_level > villain_level else hero["name"],
-        "loser_level": min(hero_level, villain_level),
-        "loser_powers": villain.get("powers", "") if hero_level > villain_level else hero.get("powers", ""),
-        "loser_picture": villain.get("picture", "") if hero_level > villain_level else hero.get("picture", ""),
-        "winner_team": "heroes" if hero_level > villain_level else "villains",
-        "loser_team": "villains" if hero_level > villain_level else "heroes",
-        "hero": hero,
-        "villain": villain,
-        "location": location,
-    }
-
+    response = build_fight_response(hero, villain, location)
     return JSONResponse(response, status_code=200)
 
 # @fights_router.get("/")

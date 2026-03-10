@@ -68,6 +68,12 @@ services:
     depends_on:
       heroes-db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   villains:
     build: 
@@ -79,6 +85,12 @@ services:
     depends_on:
       villains-db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   locations:
     build: 
@@ -90,6 +102,12 @@ services:
     depends_on:
       locations-db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   fights:
     build: 
@@ -97,7 +115,20 @@ services:
     ports:
       - "8004:8000"
     depends_on:
-      - fights-db
+      heroes:
+        condition: service_healthy
+      villains:
+        condition: service_healthy
+      locations:
+        condition: service_healthy
+      fights-db:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   k6:
     build: k6-image

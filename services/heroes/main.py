@@ -1,6 +1,7 @@
 import os
 import asyncio
 import asyncpg
+import random
 import time
 from starlette.applications import Starlette
 from starlette.routing import Route
@@ -61,7 +62,6 @@ async def get_random_item(request: Request) -> JSONResponse:
         max_id = max_id_row['max_id'] if max_id_row and max_id_row['max_id'] else 1
         
         # Use random offset with LIMIT 1 - more efficient than ORDER BY RANDOM()
-        import random
         random_id = random.randint(1, max_id)
         row = await conn.fetchrow(
             "SELECT * FROM Hero WHERE id >= $1 LIMIT 1",
@@ -90,7 +90,12 @@ async def get_item(request: Request) -> JSONResponse:
         row_dict["otherName"] = row_dict.pop("othername")
     return JSONResponse(row_dict)
 
+async def health_check(request: Request) -> Response:
+    """Lightweight health check endpoint for orchestration."""
+    return Response("OK", status_code=200, media_type="text/plain")
+
 routes = [
+    Route("/health", health_check, methods=["GET"]),
     Route("/api/heroes/random_hero", get_random_item, methods=["GET"]),
     Route("/api/heroes", list_all, methods=["GET"]),
     Route("/api/heroes/{id}", get_item, methods=["GET"]),
