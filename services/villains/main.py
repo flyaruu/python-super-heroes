@@ -2,6 +2,7 @@ import os
 import asyncio
 import asyncpg
 import time
+from contextlib import asynccontextmanager
 from starlette.applications import Starlette
 from starlette.routing import Route
 from starlette.requests import Request
@@ -14,14 +15,14 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgres://superman:superman@villains-
 RETRY_TIMEOUT = 10  # seconds
 RETRY_INTERVAL = 0.5  # seconds between attempts
 
-async def startup():
+@asynccontextmanager
+async def lifespan(app):
     start_time = asyncio.get_event_loop().time()
     while True:
         try:
             app.state.pool = await asyncpg.create_pool(
                 DATABASE_URL, min_size=10, max_size=50
             )
-            # Ensure table exists
             async with app.state.pool.acquire() as conn:
                 await conn.execute(
                     """
@@ -32,14 +33,13 @@ async def startup():
                     );
                     """
                 )
-            break  # successful connection
+            break
         except (asyncpg.CannotConnectNowError, OSError) as e:
             now = asyncio.get_event_loop().time()
             if now - start_time >= RETRY_TIMEOUT:
                 raise RuntimeError(f"Could not connect to database within {RETRY_TIMEOUT} seconds") from e
             await asyncio.sleep(RETRY_INTERVAL)
-
-async def shutdown():
+    yield
     await app.state.pool.close()
 
 
@@ -96,7 +96,7 @@ routes = [
     Route("/api/villains/{id}", get_item, methods=["GET"]),
 ]
 
-app = Starlette(debug=False, routes=routes, on_startup=[startup], on_shutdown=[shutdown])
+app = Starlette(debug=False, routes=routes, lifespan=lifespan)
 
 if __name__ == "__main__":
     import uvicorn

@@ -3,6 +3,7 @@ import asyncio
 import aiomysql
 import logging
 import time
+from contextlib import asynccontextmanager
 
 from starlette.applications import Starlette
 from starlette.routing import Route
@@ -34,8 +35,8 @@ RETRY_TIMEOUT = 30  # seconds
 RETRY_INTERVAL = 0.5  # seconds between attempts
 
 
-async def startup():
-    """Try to connect and create table, retrying for up to 10 seconds."""
+@asynccontextmanager
+async def lifespan(app):
     parsed = urllib.parse.urlparse(MYSQL_URL)
     conn_kwargs = {
         "host": parsed.hostname,
@@ -53,7 +54,6 @@ async def startup():
     while time.monotonic() < deadline:
         try:
             pool = await aiomysql.create_pool(**conn_kwargs)
-            # ensure table exists
             logger.info("Creating table if it does not exist")
             async with pool.acquire() as conn:
                 async with conn.cursor() as cur:
@@ -61,16 +61,14 @@ async def startup():
                         select count(*) from locations;
                     """)
             app.state.pool = pool
-            return
+            break
         except Exception as e:
             last_exc = e
             await asyncio.sleep(0.5)
+    else:
+        raise RuntimeError(f"Could not connect to MySQL within 10s: {last_exc!r}")
 
-    # if we get here, we never connected
-    raise RuntimeError(f"Could not connect to MySQL within 10s: {last_exc!r}")
-
-
-async def shutdown():
+    yield
     await app.state.pool.close()
 
 async def list_all(request: Request) -> JSONResponse:
@@ -130,7 +128,7 @@ routes = [
     Route("/api/locations/{id}", get_item, methods=["GET"]),
 ]
 
-app = Starlette(debug=False, routes=routes, on_startup=[startup], on_shutdown=[shutdown])
+app = Starlette(debug=False, routes=routes, lifespan=lifespan)
 
 if __name__ == "__main__":
     import uvicorn
