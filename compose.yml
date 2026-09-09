@@ -94,6 +94,8 @@ services:
   fights:
     build: 
       context: services/fights
+    environment:
+      MONGO_URL: "mongodb://superfight:superfight@fights-db:27017/fights"
     ports:
       - "8004:8000"
     depends_on:

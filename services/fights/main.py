@@ -5,6 +5,8 @@ import os
 import logging
 import uuid
 import asyncio
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from starlette.responses import JSONResponse, Response
 
 
@@ -12,6 +14,11 @@ from starlette.responses import JSONResponse, Response
 logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+MONGO_URL = os.getenv("MONGO_URL", "mongodb://superfight:superfight@fights-db:27017/fights")
+RETRY_TIMEOUT = 10
+RETRY_INTERVAL = 0.5
+mongo_client = None
+fights_collection = None
 
 app = FastAPI()
 # Optimized HTTP client with connection pooling and timeouts
@@ -31,11 +38,27 @@ client = httpx.AsyncClient(
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting up HTTP client")
+    global mongo_client, fights_collection
+
+    mongo_client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=2000)
+    start_time = asyncio.get_event_loop().time()
+    while True:
+        try:
+            await mongo_client.admin.command("ping")
+            fights_collection = mongo_client.get_default_database()["fights"]
+            break
+        except ServerSelectionTimeoutError as exc:
+            now = asyncio.get_event_loop().time()
+            if now - start_time >= RETRY_TIMEOUT:
+                raise RuntimeError(f"Could not connect to MongoDB within {RETRY_TIMEOUT} seconds") from exc
+            await asyncio.sleep(RETRY_INTERVAL)
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     await client.aclose()
+    if mongo_client:
+        mongo_client.close()
 
 # Fights router with external service calls
 fights_router = APIRouter(prefix="/api")
@@ -86,6 +109,14 @@ async def get_location():
     return response.json()
 
 
+async def save_fight_result(fight_result: dict) -> None:
+    try:
+        await fights_collection.insert_one({**fight_result, "_id": fight_result["id"]})
+    except PyMongoError as exc:
+        logger.exception("Failed to save fight result")
+        raise HTTPException(status_code=503, detail="Could not save fight result") from exc
+
+
 @fights_router.get("/fights/randomfighters")
 async def random_fighters()-> JSONResponse:
     """Fetch two random fighters from external service in parallel."""
@@ -126,6 +157,8 @@ async def post_fight(request: Request)-> JSONResponse:
         "location": location,
     }
 
+    await save_fight_result(response)
+
     return JSONResponse(response, status_code=200)
 
 
@@ -160,6 +193,8 @@ async def execute_random_fight()-> JSONResponse:
         "villain": villain,
         "location": location,
     }
+
+    await save_fight_result(response)
 
     return JSONResponse(response, status_code=200)
 

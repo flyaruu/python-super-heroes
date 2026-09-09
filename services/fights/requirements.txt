@@ -4,6 +4,6 @@ python-dotenv
 
 fastapi>=0.95.0
 httpx>=0.24.0
+motor>=3.6.0
 # uvicorn[standard]>=0.22.0
-
 
