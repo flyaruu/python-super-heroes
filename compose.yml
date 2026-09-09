@@ -21,7 +21,7 @@ services:
     volumes:
       - ./database/heroes-db/init/heroes.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U superman"]
+      test: ["CMD-SHELL", "pg_isready -U superman --dbname=heroes_database"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -37,8 +37,8 @@ services:
     volumes:
       - ./database/villains-db/init/villains.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U superman"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U superman --dbname=villains_database"]
+      interval: 1s
       timeout: 5s
       retries: 20
   locations-db:

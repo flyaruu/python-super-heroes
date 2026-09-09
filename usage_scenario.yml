@@ -17,7 +17,7 @@ flow:
     container: k6
     commands:
       - type: console
-#        command: k6 run -e RAMPING_RATE=1 --new-machine-readable-summary  --summary-export=/results/summary_1.json /k6/load.js
+        shell: bash
         command: k6 run -e RAMPING_RATE=1 --new-machine-readable-summary  --summary-export=/results/summary_1.json /k6/load.js && cat /results/summary_1.json
         note: Starting k6 Load Test 1 rps
         log-stdout: true
@@ -27,6 +27,7 @@ flow:
     container: k6
     commands:
       - type: console
+        shell: bash
         command: k6 run -e RAMPING_RATE=10 --new-machine-readable-summary  --summary-export=/results/summary_10.json /k6/load.js && cat /results/summary_10.json
         note: Starting k6 Load Test 10 rps
         log-stdout: true
@@ -36,6 +37,7 @@ flow:
     container: k6
     commands:
       - type: console
+        shell: bash
         command: k6 run -e RAMPING_RATE=50 --new-machine-readable-summary  --summary-export=/results/summary_50.json /k6/load.js && cat /results/summary_50.json
         note: Starting k6 Load Test 50 rps
         log-stdout: true
@@ -45,6 +47,7 @@ flow:
     container: k6
     commands:
       - type: console
+        shell: bash
         command: k6 run -e RAMPING_RATE=75 --new-machine-readable-summary  --summary-export=/results/summary_75.json /k6/load.js && cat /results/summary_75.json
         note: Starting k6 Load Test 75 rps
         log-stdout: true
@@ -54,6 +57,7 @@ flow:
     container: k6
     commands:
       - type: console
+        shell: bash
         command: k6 run -e RAMPING_RATE=100 --new-machine-readable-summary  --summary-export=/results/summary_100.json /k6/load.js && cat /results/summary_100.json
         note: Starting k6 Load Test 100 rps
         log-stdout: true
